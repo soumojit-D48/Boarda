@@ -152,8 +152,4 @@ export const deleteTask = async (taskId: string) => {
   return await api.delete(`/tasks/${taskId}`);
 };
 
-export const deleteWorkspace = async (workspaceId: string) => {
-    return await api.delete(`/workspaces/${workspaceId}`);
-};
-
 export default api;

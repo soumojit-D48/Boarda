@@ -1,8 +1,8 @@
-import { ArrowRight, User, Users, Trash2 } from "lucide-react";
-import { useNavigate } from "react-router-dom";
-import { toast } from "sonner";
-import { useWorkspaces } from "@/hooks/useWorkspaces";
-import { useState } from "react";
+import { ArrowRight, User, Users, Trash2 } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { toast } from 'sonner';
+import { useWorkspaces } from '@/hooks/useWorkspaces';
+import { useState } from 'react';
 
 import {
   AlertDialog,
@@ -14,7 +14,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
   AlertDialogTrigger,
-} from "@/components/ui/alert-dialog";
+} from '@/components/ui/alert-dialog';
 
 type Props = {
   workspace: Record<string, any>;
@@ -36,9 +36,9 @@ export function WorkspaceCard({ workspace }: Props) {
       const promise = deleteWorkspace(workspace._id);
 
       toast.promise(promise, {
-        loading: "Deleting workspace...",
-        success: "Workspace deleted successfully",
-        error: "Failed to delete workspace",
+        loading: 'Deleting workspace...',
+        success: 'Workspace deleted successfully',
+        error: 'Failed to delete workspace',
       });
 
       await promise;
@@ -50,23 +50,28 @@ export function WorkspaceCard({ workspace }: Props) {
   return (
     <div
       onClick={() => navigate(`/workspaces/${workspace._id}`)}
-      className="group cursor-pointer h-full bg-card border border-gray-200 dark:border-zinc-800 rounded-xl p-6 transition-all duration-200 hover:border-gray-300 dark:hover:border-zinc-700 hover:shadow-[0_4px_20px_-4px_rgba(0,0,0,0.05)] dark:hover:shadow-[0_4px_20px_-4px_rgba(0,0,0,0.4)] flex flex-col"
+      onKeyDown={(e) => {
+        if (e.key === 'Enter' || e.key === 'Space') {
+          e.preventDefault();
+          navigate(`/workspaces/${workspace._id}`);
+        }
+      }}
+      tabIndex={0}
+      role="button"
+      className="group cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-500 h-full bg-card border border-gray-200 dark:border-zinc-800 rounded-xl p-6 transition-all duration-200 hover:border-gray-300 dark:hover:border-zinc-700 hover:shadow-[0_4px_20px_-4px_rgba(0,0,0,0.05)] dark:hover:shadow-[0_4px_20px_-4px_rgba(0,0,0,0.4)] flex flex-col"
     >
       {/* ================= HEADER ================= */}
       <div className="flex justify-between items-start mb-6">
         {/* LEFT ICON */}
         <div className="w-10 h-10 rounded-lg bg-purple-50 dark:bg-purple-500/10 flex items-center justify-center text-purple-600 dark:text-purple-400">
-          {isPersonal ? (
-            <User className="w-5 h-5" />
-          ) : (
-            <Users className="w-5 h-5" />
-          )}
+          {isPersonal ? <User className="w-5 h-5" /> : <Users className="w-5 h-5" />}
         </div>
 
         {/* RIGHT ACTIONS */}
         <div
           className="flex items-center gap-2"
-          onClick={(e) => e.stopPropagation()}
+          onPointerDown={(e) => e.stopPropagation()}
+          onMouseDown={(e) => e.stopPropagation()}
         >
           {/* DELETE */}
           <AlertDialog>
@@ -74,40 +79,48 @@ export function WorkspaceCard({ workspace }: Props) {
               <button
                 aria-label="Delete workspace"
                 className="p-1.5 rounded-md text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 transition-colors"
+                onPointerDown={(e) => e.stopPropagation()}
+                onMouseDown={(e) => e.stopPropagation()}
+                onClick={(e) => e.stopPropagation()}
+                onKeyDown={(e) => e.stopPropagation()}
               >
                 <Trash2 className="w-4 h-4" />
               </button>
             </AlertDialogTrigger>
 
-            <AlertDialogContent>
+            <AlertDialogContent
+              onClick={(e) => e.stopPropagation()}
+              onKeyDown={(e) => e.stopPropagation()}
+              onPointerDown={(e) => e.stopPropagation()}
+            >
               <AlertDialogHeader>
-                <AlertDialogTitle>
-                  Delete Workspace
-                </AlertDialogTitle>
+                <AlertDialogTitle>Delete Workspace</AlertDialogTitle>
                 <AlertDialogDescription>
-                  Are you sure you want to delete "
-                  {workspace.name}"? This action cannot be undone.
+                  Are you sure you want to delete "{workspace.name}"? This action cannot be undone.
                 </AlertDialogDescription>
               </AlertDialogHeader>
 
               <AlertDialogFooter>
-                <AlertDialogCancel disabled={isDeleting}>
-                  Cancel
-                </AlertDialogCancel>
+                <AlertDialogCancel disabled={isDeleting}>Cancel</AlertDialogCancel>
 
                 <AlertDialogAction
                   onClick={handleDelete}
                   disabled={isDeleting}
                   className="bg-red-600 hover:bg-red-700"
                 >
-                  {isDeleting ? "Deleting..." : "Delete"}
+                  {isDeleting ? 'Deleting...' : 'Delete'}
                 </AlertDialogAction>
               </AlertDialogFooter>
             </AlertDialogContent>
           </AlertDialog>
 
           {/* ARROW */}
-          <ArrowRight className="w-4 h-4 text-gray-300 dark:text-gray-600 group-hover:text-gray-400 transition-colors" />
+          <ArrowRight
+            className="w-4 h-4 text-gray-300 dark:text-gray-600 group-hover:text-gray-400 transition-colors"
+            onPointerDown={(e) => e.stopPropagation()}
+            onMouseDown={(e) => e.stopPropagation()}
+            onClick={(e) => e.stopPropagation()}
+          />
         </div>
       </div>
 
@@ -118,10 +131,10 @@ export function WorkspaceCard({ workspace }: Props) {
         </h3>
 
         <div className="flex items-center text-[13px] text-gray-500 dark:text-gray-400 gap-1.5">
-          <span>{isPersonal ? "Private" : "Shared"}</span>
+          <span>{isPersonal ? 'Private' : 'Shared'}</span>
           <span className="text-gray-300 dark:text-gray-600">•</span>
           <span>
-            {memberCount} {memberCount === 1 ? "member" : "members"}
+            {memberCount} {memberCount === 1 ? 'member' : 'members'}
           </span>
         </div>
       </div>
