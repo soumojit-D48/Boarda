@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { getBoardById, getTasks, createTask, updateTask, deleteTask, getTags, createTag, reorderTasks } from '../lib/api';
+import { getTags, createTag, reorderTasks } from '../lib/api';
+import { useTasks } from '../hooks/useTasks';
+import { useBoards } from '../hooks/useBoards';
 import { TaskColumn } from '../components/TaskColumn';
 import { DragDropContext } from '@hello-pangea/dnd';
 import type { DropResult } from '@hello-pangea/dnd';
@@ -24,16 +26,23 @@ export default function BoardView() {
     'todo'
   );
 
+  const { tasks: queryTasks, createTask, updateTask, deleteTask } = useTasks(boardId);
+  const { board: queryBoard, isLoadingBoard } = useBoards(undefined, boardId);
+
+  useEffect(() => {
+    setTasks(queryTasks as any[]);
+  }, [queryTasks]);
+
+  useEffect(() => {
+    if (queryBoard) {
+      setBoard(queryBoard);
+    }
+  }, [queryBoard]);
+
   const fetchBoardAndTasks = async () => {
     if (!boardId) return;
     try {
       setIsLoading(true);
-      const [boardRes, tasksRes] = await Promise.all([
-        getBoardById(boardId),
-        getTasks(boardId)
-      ]);
-      setBoard(boardRes.data.board);
-      setTasks(tasksRes.data.tasks || []);
 
       try {
         const tagsRes = await getTags(boardId);
@@ -53,7 +62,7 @@ export default function BoardView() {
     fetchBoardAndTasks();
   }, [boardId]);
 
-  if (isLoading) {
+  if (isLoading || isLoadingBoard) {
     return <div className="p-8">Loading board...</div>;
   }
 
@@ -86,11 +95,10 @@ export default function BoardView() {
     if (!boardId) return;
     try {
       if (selectedTask) {
-        await updateTask(selectedTask._id, taskData);
+        await updateTask({ taskId: selectedTask._id, data: taskData });
       } else {
         await createTask({ ...taskData, boardId });
       }
-      await fetchBoardAndTasks();
     } catch (error) {
       console.error('Failed to save task', error);
       alert('Error saving task');
@@ -103,7 +111,6 @@ export default function BoardView() {
     try {
       await deleteTask(selectedTask._id);
       setIsModalOpen(false);
-      await fetchBoardAndTasks();
     } catch (error) {
       console.error('Failed to delete task', error);
     }
@@ -118,8 +125,13 @@ export default function BoardView() {
       return;
     }
 
-    const buildReorderResult = (prevTasks: TaskProps[], source: any, destination: any, draggableId: string) => {
-      const newTasks = prevTasks.map(t => ({ ...t }));
+    const buildReorderResult = (
+      prevTasks: TaskProps[],
+      source: any,
+      destination: any,
+      draggableId: string
+    ) => {
+      const newTasks = prevTasks.map((t) => ({ ...t }));
 
       const sourceColTasks = newTasks
         .filter((t) => t.status === source.droppableId)
@@ -129,8 +141,8 @@ export default function BoardView() {
         source.droppableId === destination.droppableId
           ? sourceColTasks
           : newTasks
-            .filter((t) => t.status === destination.droppableId)
-            .sort((a: any, b: any) => (a.order || 0) - (b.order || 0));
+              .filter((t) => t.status === destination.droppableId)
+              .sort((a: any, b: any) => (a.order || 0) - (b.order || 0));
 
       const movedTaskIndex = sourceColTasks.findIndex((t) => t._id === draggableId);
       if (movedTaskIndex === -1) return { computedTasks: prevTasks, tasksToUpdateItems: [] };
@@ -167,7 +179,12 @@ export default function BoardView() {
     };
 
     const previousTasks = tasks;
-    const { computedTasks, tasksToUpdateItems } = buildReorderResult(tasks, source, destination, draggableId);
+    const { computedTasks, tasksToUpdateItems } = buildReorderResult(
+      tasks,
+      source,
+      destination,
+      draggableId
+    );
 
     if (tasksToUpdateItems.length === 0) return;
 

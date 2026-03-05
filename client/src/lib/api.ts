@@ -82,76 +82,8 @@ function forceLogout() {
   window.location.href = '/signin';
 }
 
-export const createBoard = async (data: {
-  name: string;
-  description?: string;
-  workspaceId: string;
-  members?: { userId: string; role: string }[];
-}) => {
-  return await api.post('/boards', data);
-};
-
-export const updateBoard = async (
-  boardId: string,
-  data: {
-    name?: string;
-    description?: string;
-    members?: { userId: string; role: string }[];
-  }
-) => {
-  return await api.patch(`/boards/${boardId}`, data);
-};
-
 export const searchUsers = async (query: string) => {
   return await api.get(`/users/search?q=${query}`);
-};
-
-export const getBoards = async (workspaceId: string) => {
-  return await api.get(`/boards/workspace/${workspaceId}`);
-};
-
-export const getBoardById = async (boardId: string) => {
-  return await api.get(`/boards/${boardId}`);
-};
-
-export const deleteBoard = async (boardId: string) => {
-  return await api.delete(`/boards/${boardId}`);
-};
-
-export const getTasks = async (boardId: string) => {
-  return await api.get(`/tasks/board/${boardId}`);
-};
-
-export const createTask = async (data: {
-  title: string;
-  description?: string;
-  boardId: string;
-  assignedTo?: string;
-  status?: string;
-  priority?: string;
-  dueDate?: string;
-  tags?: string[];
-}) => {
-  return await api.post('/tasks', data);
-};
-
-export const updateTask = async (
-  taskId: string,
-  data: {
-    title?: string;
-    description?: string;
-    assignedTo?: string;
-    status?: string;
-    priority?: string;
-    dueDate?: string;
-    tags?: string[];
-  }
-) => {
-  return await api.patch(`/tasks/${taskId}`, data);
-};
-
-export const deleteTask = async (taskId: string) => {
-  return await api.delete(`/tasks/${taskId}`);
 };
 
 export const getTags = async (boardId: string) => {
@@ -162,7 +94,10 @@ export const createTag = async (boardId: string, data: { name: string; color: st
   return await api.post(`/tags/${boardId}/create`, data);
 };
 
-export const reorderTasks = async (boardId: string, tasks: { _id: string; status: string; order: number }[]) => {
+export const reorderTasks = async (
+  boardId: string,
+  tasks: { _id: string; status: string; order: number }[]
+) => {
   return await api.put(`/tasks/board/${boardId}/reorder`, { tasks });
 };
 
