@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { Card } from './ui/card';
 import { MoreHorizontal, Trash2, Edit2 } from 'lucide-react';
-import { deleteBoard } from '../lib/api';
+import { useBoards } from '../hooks/useBoards';
 import { EditBoardModal } from './EditBoardModal';
 import { useNavigate } from 'react-router-dom';
 import {
@@ -71,21 +71,14 @@ export interface BoardCardProps {
   index: number;
   viewMode?: 'grid' | 'list';
   onDelete: (boardId: string) => void;
-  onUpdate: () => void;
 }
 
-export function BoardCard({
-  board,
-  index,
-  viewMode = 'grid',
-  onDelete,
-  onUpdate,
-}: BoardCardProps) {
+export function BoardCard({ board, index, viewMode = 'grid', onDelete }: BoardCardProps) {
   const navigate = useNavigate();
   const updatedAtText = timeAgo(board.updatedAt);
+  const { deleteBoard } = useBoards();
 
-  const topColor =
-    board.colorCode || defaultColors[index % defaultColors.length];
+  const topColor = board.colorCode || defaultColors[index % defaultColors.length];
 
   const displayMembers = board.members.slice(0, 3);
   const extraMembersCount = Math.max(0, board.members.length - 3);
@@ -104,8 +97,7 @@ export function BoardCard({
       }
     }
     document.addEventListener('mousedown', handleClickOutside);
-    return () =>
-      document.removeEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
   const handleDelete = async () => {
@@ -123,8 +115,7 @@ export function BoardCard({
           return 'Board deleted successfully';
         },
         error: (error: any) =>
-          error?.response?.data?.message ||
-          'Failed to delete board. Only creator can delete it.',
+          error?.response?.data?.message || 'Failed to delete board. Only creator can delete it.',
       });
 
       await promise;
@@ -133,8 +124,7 @@ export function BoardCard({
     }
   };
 
-  const hasWriteAccess =
-    board.userRole === 'write' || board.userRole === 'owner';
+  const hasWriteAccess = board.userRole === 'write' || board.userRole === 'owner';
 
   /* ================= LIST VIEW ================= */
   if (viewMode === 'list') {
@@ -235,10 +225,6 @@ export function BoardCard({
         <EditBoardModal
           isOpen={isEditModalOpen}
           onClose={() => setIsEditModalOpen(false)}
-          onSuccess={() => {
-            setIsEditModalOpen(false);
-            onUpdate();
-          }}
           board={board}
         />
       </>
@@ -248,110 +234,97 @@ export function BoardCard({
   /* ================= GRID VIEW ================= */
   return (
     <>
-      
-        <Card
-  className="p-6 gap-0 hover:shadow-lg transition-all relative h-45 flex flex-col justify-between border-gray-200/80 dark:border-zinc-800 shadow-sm rounded-xl bg-card group cursor-pointer"
-  onClick={() => navigate(`/boards/${board._id}`)}
->
-  <div className={`w-8 h-1 shrink-0 ${topColor} rounded-full mb-4`} />
+      <Card
+        className="p-6 gap-0 hover:shadow-lg transition-all relative h-45 flex flex-col justify-between border-gray-200/80 dark:border-zinc-800 shadow-sm rounded-xl bg-card group cursor-pointer"
+        onClick={() => navigate(`/boards/${board._id}`)}
+      >
+        <div className={`w-8 h-1 shrink-0 ${topColor} rounded-full mb-4`} />
 
-  <div className="flex justify-between items-start mb-2">
-    <h3 className="font-bold text-[17px] text-gray-900 dark:text-gray-100 truncate max-w-[85%] text-left">
-      {board.name}
-    </h3>
-  </div>
-
-  <p className="text-[13px] text-gray-400 dark:text-gray-500 font-medium mb-auto flex-1 text-left">
-    Updated {updatedAtText}
-  </p>
-
-  <div className="flex justify-between items-end mt-2">
-    <div className="flex -space-x-2">
-      {displayMembers.map((member, i) => (
-        <div
-          key={member.userId._id}
-          className="w-8 h-8 rounded-full border-2 border-white dark:border-zinc-950 bg-gray-200 dark:bg-zinc-800 flex items-center justify-center overflow-hidden z-10"
-          style={{ zIndex: 10 - i }}
-        >
-          {member.userId.avatar ? (
-            <img
-              src={member.userId.avatar}
-              className="w-full h-full object-cover"
-            />
-          ) : (
-            <span className="text-xs text-gray-500 font-medium">
-              {(member.userId.fullName ||
-                member.userId.username ||
-                '?')[0].toUpperCase()}
-            </span>
-          )}
+        <div className="flex justify-between items-start mb-2">
+          <h3 className="font-bold text-[17px] text-gray-900 dark:text-gray-100 truncate max-w-[85%] text-left">
+            {board.name}
+          </h3>
         </div>
-      ))}
 
-      {extraMembersCount > 0 && (
-        <div className="w-8 h-8 rounded-full border-2 border-white dark:border-zinc-950 bg-gray-100 dark:bg-zinc-900 flex items-center justify-center">
-          <span className="text-xs">+{extraMembersCount}</span>
-        </div>
-      )}
-    </div>
+        <p className="text-[13px] text-gray-400 dark:text-gray-500 font-medium mb-auto flex-1 text-left">
+          Updated {updatedAtText}
+        </p>
 
-            {hasWriteAccess && (
-              <div className="relative" ref={menuRef}>
-                <button
-                  className="text-gray-300 dark:text-gray-600 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-zinc-800 cursor-pointer p-1.5 rounded-md transition-colors opacity-0 group-hover:opacity-100 focus:opacity-100 outline-none"
-                  onClick={(e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    setIsMenuOpen(!isMenuOpen);
-                  }}
-                >
-                  <MoreHorizontal className="w-4 h-4" />
-                </button>
-
-                {isMenuOpen && (
-                  <div className="absolute right-0 mt-2 w-32 bg-white dark:bg-zinc-900 rounded-md shadow-lg border border-gray-200 dark:border-zinc-800 z-50 py-1">
-                    <button
-                      className="w-full text-left px-3 py-1.5 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-zinc-800 flex items-center gap-2"
-                      onClick={(e) => {
-                        e.preventDefault();
-                        e.stopPropagation();
-                        setIsMenuOpen(false);
-                        setIsEditModalOpen(true);
-                      }}
-                    >
-                      <Edit2 className="w-3.5 h-3.5" /> Edit
-                    </button>
-                    <button
-                      className="w-full text-left px-3 py-1.5 text-sm text-red-600 dark:text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 flex items-center gap-2"
-                      onClick={(e) => {
-                        e.preventDefault();
-                        e.stopPropagation();
-                        setIsDeleteDialogOpen(true);
-                      }}
-                      disabled={isDeleting}
-                    >
-                      <Trash2 className="w-3.5 h-3.5" /> {isDeleting ? 'Deleting...' : 'Delete'}
-                    </button>
-                  </div>
+        <div className="flex justify-between items-end mt-2">
+          <div className="flex -space-x-2">
+            {displayMembers.map((member, i) => (
+              <div
+                key={member.userId._id}
+                className="w-8 h-8 rounded-full border-2 border-white dark:border-zinc-950 bg-gray-200 dark:bg-zinc-800 flex items-center justify-center overflow-hidden z-10"
+                style={{ zIndex: 10 - i }}
+              >
+                {member.userId.avatar ? (
+                  <img src={member.userId.avatar} className="w-full h-full object-cover" />
+                ) : (
+                  <span className="text-xs text-gray-500 font-medium">
+                    {(member.userId.fullName || member.userId.username || '?')[0].toUpperCase()}
+                  </span>
                 )}
+              </div>
+            ))}
+
+            {extraMembersCount > 0 && (
+              <div className="w-8 h-8 rounded-full border-2 border-white dark:border-zinc-950 bg-gray-100 dark:bg-zinc-900 flex items-center justify-center">
+                <span className="text-xs">+{extraMembersCount}</span>
               </div>
             )}
           </div>
-        </Card>
-        <EditBoardModal
-          isOpen={isEditModalOpen}
-          onClose={() => setIsEditModalOpen(false)}
-          onSuccess={() => {
-            setIsEditModalOpen(false);
-            onUpdate();
-          }}
-          board={board}
-        />
-      
-      <AlertDialog
-        open={isDeleteDialogOpen}
-        onOpenChange={setIsDeleteDialogOpen}
-      >
+
+          {hasWriteAccess && (
+            <div className="relative" ref={menuRef}>
+              <button
+                className="text-gray-300 dark:text-gray-600 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-zinc-800 cursor-pointer p-1.5 rounded-md transition-colors opacity-0 group-hover:opacity-100 focus:opacity-100 outline-none"
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  setIsMenuOpen(!isMenuOpen);
+                }}
+              >
+                <MoreHorizontal className="w-4 h-4" />
+              </button>
+
+              {isMenuOpen && (
+                <div className="absolute right-0 mt-2 w-32 bg-white dark:bg-zinc-900 rounded-md shadow-lg border border-gray-200 dark:border-zinc-800 z-50 py-1">
+                  <button
+                    className="w-full text-left px-3 py-1.5 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-zinc-800 flex items-center gap-2"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      setIsMenuOpen(false);
+                      setIsEditModalOpen(true);
+                    }}
+                  >
+                    <Edit2 className="w-3.5 h-3.5" /> Edit
+                  </button>
+                  <button
+                    className="w-full text-left px-3 py-1.5 text-sm text-red-600 dark:text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 flex items-center gap-2"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      setIsDeleteDialogOpen(true);
+                    }}
+                    disabled={isDeleting}
+                  >
+                    <Trash2 className="w-3.5 h-3.5" /> {isDeleting ? 'Deleting...' : 'Delete'}
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      </Card>
+      <EditBoardModal
+        isOpen={isEditModalOpen}
+        onClose={() => setIsEditModalOpen(false)}
+        board={board}
+      />
+
+      <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
         <AlertDialogContent onClick={(e) => e.stopPropagation()}>
           <AlertDialogHeader>
             <AlertDialogTitle>Delete board?</AlertDialogTitle>

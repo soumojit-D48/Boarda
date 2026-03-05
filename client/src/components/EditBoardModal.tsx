@@ -5,7 +5,8 @@ import * as z from 'zod';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { Label } from './ui/label';
-import { updateBoard, searchUsers } from '../lib/api';
+import { searchUsers } from '../lib/api';
+import { useBoards } from '../hooks/useBoards';
 import { Search, X } from 'lucide-react';
 import { useAuthStore } from '../store/auth-store';
 
@@ -19,11 +20,10 @@ type BoardFormValues = z.infer<typeof boardSchema>;
 interface EditBoardModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSuccess: () => void;
   board: any;
 }
 
-export function EditBoardModal({ isOpen, onClose, onSuccess, board }: EditBoardModalProps) {
+export function EditBoardModal({ isOpen, onClose, board }: EditBoardModalProps) {
   const [isLoading, setIsLoading] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState<any[]>([]);
@@ -32,6 +32,7 @@ export function EditBoardModal({ isOpen, onClose, onSuccess, board }: EditBoardM
   const searchRef = useRef<HTMLDivElement>(null);
 
   const { user: currentUser } = useAuthStore();
+  const { updateBoard } = useBoards(board?.workspaceId, board?._id);
 
   const {
     register,
@@ -113,12 +114,14 @@ export function EditBoardModal({ isOpen, onClose, onSuccess, board }: EditBoardM
 
     try {
       setIsLoading(true);
-      await updateBoard(board._id, {
-        name: data.name,
-        description: data.description,
-        members: selectedUsers.map((u) => ({ userId: u._id, role: u.role })),
+      await updateBoard({
+        boardId: board._id,
+        data: {
+          name: data.name,
+          description: data.description,
+          members: selectedUsers.map((u) => ({ userId: u._id, role: u.role })),
+        },
       });
-      onSuccess();
       onClose();
     } catch (error) {
       console.error('Failed to update board:', error);

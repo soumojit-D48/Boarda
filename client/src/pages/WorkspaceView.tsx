@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
-import { getBoards } from '../lib/api';
 import { useWorkspaces } from '../hooks/useWorkspaces';
+import { useBoards } from '../hooks/useBoards';
 import { CreateBoardModal } from '../components/CreateBoardModal';
 import { BoardCard } from '../components/BoardCard';
 import type { BoardProps } from '../components/BoardCard';
@@ -25,26 +25,17 @@ export default function WorkspaceView() {
   const [workspace, setWorkspace] = useState<Workspace | null>(null);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [isMembersModalOpen, setIsMembersModalOpen] = useState(false);
-  const [isLoadingBoards, setIsLoadingBoards] = useState(true);
+
+  const { boards: queryBoards, isLoadingBoards } = useBoards(workspaceId);
 
   // UI states
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const [filterMenuOpen, setFilterMenuOpen] = useState(false);
   const [sortBy, setSortBy] = useState<'updatedDesc' | 'updatedAsc' | 'nameAsc'>('updatedDesc');
 
-  const fetchWorkspaceAndBoards = async () => {
-    if (!workspaceId) return;
-
-    try {
-      setIsLoadingBoards(true);
-      const boardsRes = await getBoards(workspaceId);
-      setBoards(boardsRes.data.boards || []);
-    } catch (error) {
-      console.error('Failed to fetch data:', error);
-    } finally {
-      setIsLoadingBoards(false);
-    }
-  };
+  useEffect(() => {
+    setBoards(queryBoards as unknown as BoardProps[]);
+  }, [queryBoards]);
 
   useEffect(() => {
     if (workspaces && workspaceId) {
@@ -57,10 +48,6 @@ export default function WorkspaceView() {
 
   const userRole = workspace?.userRole || 'shared';
   const canCreateBoard = userRole === 'owner' || userRole === 'admin';
-
-  useEffect(() => {
-    fetchWorkspaceAndBoards();
-  }, [workspaceId]);
 
   // Sorting logic
   const sortedBoards = [...boards].sort((a, b) => {
@@ -216,7 +203,6 @@ export default function WorkspaceView() {
             index={index}
             viewMode={viewMode}
             onDelete={handleDeleteBoard}
-            onUpdate={fetchWorkspaceAndBoards}
           />
         ))}
 
@@ -249,7 +235,6 @@ export default function WorkspaceView() {
       <CreateBoardModal
         isOpen={isCreateModalOpen}
         onClose={() => setIsCreateModalOpen(false)}
-        onSuccess={fetchWorkspaceAndBoards}
         workspaceId={workspaceId!}
       />
 

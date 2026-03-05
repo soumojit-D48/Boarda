@@ -5,7 +5,8 @@ import * as z from 'zod';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { Label } from './ui/label';
-import { createBoard, searchUsers } from '../lib/api';
+import { searchUsers } from '../lib/api';
+import { useBoards } from '../hooks/useBoards';
 import { Search, X } from 'lucide-react';
 
 const boardSchema = z.object({
@@ -18,22 +19,18 @@ type BoardFormValues = z.infer<typeof boardSchema>;
 interface CreateBoardModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSuccess: () => void;
   workspaceId: string;
 }
 
-export function CreateBoardModal({
-  isOpen,
-  onClose,
-  onSuccess,
-  workspaceId,
-}: CreateBoardModalProps) {
+export function CreateBoardModal({ isOpen, onClose, workspaceId }: CreateBoardModalProps) {
   const [isLoading, setIsLoading] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState<any[]>([]);
   const [isSearching, setIsSearching] = useState(false);
   const [selectedUsers, setSelectedUsers] = useState<any[]>([]);
   const searchRef = useRef<HTMLDivElement>(null);
+
+  const { createBoard } = useBoards(workspaceId);
 
   const {
     register,
@@ -99,7 +96,6 @@ export function CreateBoardModal({
         members: selectedUsers.map((u) => ({ userId: u._id, role: u.role })),
       });
       reset();
-      onSuccess();
       onClose();
     } catch (error) {
       console.error('Failed to create board:', error);
