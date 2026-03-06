@@ -33,6 +33,20 @@ export const useTasks = (boardId?: string) => {
     enabled: isAuthenticated && !!boardId,
   });
 
+  const {
+    data: tags = [],
+    isLoading: isLoadingTags,
+    error: tagsError,
+  } = useQuery({
+    queryKey: ['tags', boardId],
+    queryFn: async () => {
+      if (!boardId) return [];
+      const res = await api.get(`/tags/${boardId}`);
+      return res.data.tags ?? [];
+    },
+    enabled: isAuthenticated && !!boardId,
+  });
+
   const createMutation = useMutation({
     mutationFn: async (data: Partial<Task> & { boardId: string }) => {
       const res = await api.post('/tasks', data);
@@ -63,6 +77,29 @@ export const useTasks = (boardId?: string) => {
     },
   });
 
+  const createTagMutation = useMutation({
+    mutationFn: async (data: { name: string; color: string }) => {
+      const res = await api.post(`/tags/${boardId}/create`, data);
+      return res.data.tag;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['tags', boardId] });
+    },
+  });
+
+  const reorderTasksMutation = useMutation({
+    mutationFn: async (tasksToUpdate: { _id: string; status: string; order: number }[]) => {
+      const res = await api.put(`/tasks/board/${boardId}/reorder`, { tasks: tasksToUpdate });
+      return res.data;
+    },
+    onSuccess: () => {
+      // We often don't want to immediately invalidate the whole query because
+      // of optimistic updates done on the frontend during onDragEnd,
+      // but invalidating ensures consistency with the DB.
+      queryClient.invalidateQueries({ queryKey: ['tasks', boardId] });
+    },
+  });
+
   return {
     tasks,
     isLoading,
@@ -73,5 +110,12 @@ export const useTasks = (boardId?: string) => {
     isUpdating: updateMutation.isPending,
     deleteTask: deleteMutation.mutateAsync,
     isDeleting: deleteMutation.isPending,
+    createTag: createTagMutation.mutateAsync,
+    isCreatingTag: createTagMutation.isPending,
+    reorderTasks: reorderTasksMutation.mutateAsync,
+    isReordering: reorderTasksMutation.isPending,
+    tags,
+    isLoadingTags,
+    tagsError,
   };
 };

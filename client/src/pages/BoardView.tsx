@@ -1,6 +1,5 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { getTags, createTag, reorderTasks } from '../lib/api';
 import { useTasks } from '../hooks/useTasks';
 import { useBoards } from '../hooks/useBoards';
 import { TaskColumn } from '../components/TaskColumn';
@@ -17,16 +16,22 @@ export default function BoardView() {
 
   const [board, setBoard] = useState<any>(null);
   const [tasks, setTasks] = useState<TaskProps[]>([]);
-  const [availableTags, setAvailableTags] = useState<any[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedTask, setSelectedTask] = useState<TaskProps | undefined>(undefined);
   const [newTaskStatus, setNewTaskStatus] = useState<'todo' | 'in-progress' | 'review' | 'done'>(
     'todo'
   );
 
-  const { tasks: queryTasks, createTask, updateTask, deleteTask } = useTasks(boardId);
+  const {
+    tasks: queryTasks,
+    tags: availableTags,
+    isLoadingTags,
+    createTask,
+    updateTask,
+    deleteTask,
+    createTag: createTagQuery,
+    reorderTasks: reorderTasksQuery,
+  } = useTasks(boardId);
   const { board: queryBoard, isLoadingBoard } = useBoards(undefined, boardId);
 
   useEffect(() => {
@@ -39,30 +44,7 @@ export default function BoardView() {
     }
   }, [queryBoard]);
 
-  const fetchBoardAndTasks = async () => {
-    if (!boardId) return;
-    try {
-      setIsLoading(true);
-
-      try {
-        const tagsRes = await getTags(boardId);
-        setAvailableTags(tagsRes.data.tags || []);
-      } catch (tagError) {
-        console.error('Failed to fetch tags:', tagError);
-        setAvailableTags([]);
-      }
-    } catch (error) {
-      console.error('Failed to fetch board data:', error);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    fetchBoardAndTasks();
-  }, [boardId]);
-
-  if (isLoading || isLoadingBoard) {
+  if (isLoadingBoard || isLoadingTags) {
     return <div className="p-8">Loading board...</div>;
   }
 
@@ -191,7 +173,7 @@ export default function BoardView() {
     setTasks(computedTasks);
 
     try {
-      await reorderTasks(boardId, tasksToUpdateItems);
+      await reorderTasksQuery(tasksToUpdateItems);
     } catch (err) {
       console.error('Reorder failed, rolling back state', err);
       setTasks(() => previousTasks);
@@ -263,9 +245,7 @@ export default function BoardView() {
         availableTags={availableTags}
         onCreateTag={async (tagData) => {
           if (!boardId) throw new Error('No board ID');
-          const res = await createTag(boardId, tagData);
-          setAvailableTags((prev) => [...prev, res.data.tag]);
-          return res.data.tag;
+          return await createTagQuery(tagData);
         }}
       />
     </div>

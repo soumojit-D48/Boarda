@@ -67,13 +67,15 @@ export function TaskModal({
   availableTags = [],
   onCreateTag,
 }: TaskModalProps) {
-  const [title, setTitle] = useState('');
-  const [description, setDescription] = useState('');
-  const [status, setStatus] = useState<'todo' | 'in-progress' | 'review' | 'done'>('todo');
-  const [priority, setPriority] = useState<'low' | 'medium' | 'high'>('low');
-  const [assignedTo, setAssignedTo] = useState('');
-  const [dueDate, setDueDate] = useState('');
-  const [tags, setTags] = useState<string[]>([]);
+  const [formData, setFormData] = useState({
+    title: '',
+    description: '',
+    status: defaultStatus,
+    priority: 'low' as 'low' | 'medium' | 'high',
+    assignedTo: '',
+    dueDate: '',
+    tags: [] as string[],
+  });
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const [isCreatingTag, setIsCreatingTag] = useState(false);
@@ -82,27 +84,34 @@ export function TaskModal({
 
   useEffect(() => {
     if (task) {
-      setTitle(task.title);
-      setDescription(task.description || '');
-      setStatus(task.status);
-      setPriority(task.priority);
-      setAssignedTo(task.assignedTo?._id || '');
-      if (task.dueDate) {
-        setDueDate(new Date(task.dueDate).toISOString().split('T')[0]);
-      } else {
-        setDueDate('');
-      }
-      setTags(task.tags?.map(t => t._id) || []);
+      setFormData({
+        title: task.title,
+        description: task.description || '',
+        status: task.status,
+        priority: task.priority,
+        assignedTo: task.assignedTo?._id || '',
+        dueDate: task.dueDate ? new Date(task.dueDate).toISOString().split('T')[0] : '',
+        tags: task.tags?.map((t) => t._id) || [],
+      });
     } else {
-      setTitle('');
-      setDescription('');
-      setStatus(defaultStatus);
-      setPriority('low');
-      setAssignedTo('');
-      setDueDate('');
-      setTags([]);
+      setFormData({
+        title: '',
+        description: '',
+        status: defaultStatus,
+        priority: 'low',
+        assignedTo: '',
+        dueDate: '',
+        tags: [],
+      });
     }
   }, [task, isOpen, defaultStatus]);
+
+  const handleChange = (
+    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>
+  ) => {
+    const { name, value } = e.target;
+    setFormData((prev) => ({ ...prev, [name]: value }));
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -111,13 +120,13 @@ export function TaskModal({
     try {
       setIsSubmitting(true);
       await onSave({
-        title,
-        description,
-        status,
-        priority,
-        assignedTo: assignedTo || undefined,
-        dueDate: dueDate || undefined,
-        tags,
+        title: formData.title,
+        description: formData.description,
+        status: formData.status,
+        priority: formData.priority,
+        assignedTo: formData.assignedTo || undefined,
+        dueDate: formData.dueDate || undefined,
+        tags: formData.tags,
       });
       onClose();
     } catch (error) {
@@ -145,8 +154,9 @@ export function TaskModal({
           <div className="space-y-2">
             <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Title</label>
             <Input
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
+              name="title"
+              value={formData.title}
+              onChange={handleChange}
               placeholder="Task title"
               required
               disabled={isReadOnly}
@@ -159,8 +169,9 @@ export function TaskModal({
               Description
             </label>
             <textarea
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
+              name="description"
+              value={formData.description}
+              onChange={handleChange}
               placeholder="Add details..."
               rows={3}
               disabled={isReadOnly}
@@ -172,8 +183,9 @@ export function TaskModal({
             <div className="space-y-2">
               <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Status</label>
               <select
-                value={status}
-                onChange={(e) => setStatus(e.target.value as any)}
+                name="status"
+                value={formData.status}
+                onChange={handleChange}
                 className="flex h-10 w-full items-center justify-between rounded-md border border-gray-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 dark:text-gray-100 px-3 py-2 text-sm disabled:cursor-not-allowed disabled:opacity-50"
                 disabled={isReadOnly}
               >
@@ -189,8 +201,9 @@ export function TaskModal({
                 Priority
               </label>
               <select
-                value={priority}
-                onChange={(e) => setPriority(e.target.value as any)}
+                name="priority"
+                value={formData.priority}
+                onChange={handleChange}
                 className="flex h-10 w-full items-center justify-between rounded-md border border-gray-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 dark:text-gray-100 px-3 py-2 text-sm disabled:cursor-not-allowed disabled:opacity-50"
                 disabled={isReadOnly}
               >
@@ -205,8 +218,9 @@ export function TaskModal({
                 Assign To
               </label>
               <select
-                value={assignedTo}
-                onChange={(e) => setAssignedTo(e.target.value)}
+                name="assignedTo"
+                value={formData.assignedTo}
+                onChange={handleChange}
                 className="flex h-10 w-full items-center justify-between rounded-md border border-gray-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 dark:text-gray-100 px-3 py-2 text-sm disabled:cursor-not-allowed disabled:opacity-50"
                 disabled={isReadOnly}
               >
@@ -225,8 +239,9 @@ export function TaskModal({
               </label>
               <input
                 type="date"
-                value={dueDate}
-                onChange={(e) => setDueDate(e.target.value)}
+                name="dueDate"
+                value={formData.dueDate}
+                onChange={handleChange}
                 className="flex h-10 w-full items-center justify-between rounded-md border border-gray-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 dark:text-gray-100 px-3 py-2 text-sm disabled:cursor-not-allowed disabled:opacity-50 [&::-webkit-calendar-picker-indicator]:dark:invert"
                 disabled={isReadOnly}
               />
@@ -241,11 +256,23 @@ export function TaskModal({
                     type="button"
                     onClick={() => {
                       if (isReadOnly) return;
-                      setTags(prev => prev.includes(tag._id) ? prev.filter(t => t !== tag._id) : [...prev, tag._id])
+                      setFormData((prev) => ({
+                        ...prev,
+                        tags: prev.tags.includes(tag._id)
+                          ? prev.tags.filter((t) => t !== tag._id)
+                          : [...prev.tags, tag._id],
+                      }));
                     }}
-                    className={`px-2 py-1 text-xs font-semibold rounded-md border transition-all ${tags.includes(tag._id) ? 'ring-2 ring-offset-1 ring-offset-white dark:ring-offset-zinc-950 ring-indigo-500 shadow-sm' : 'opacity-60 scale-95 hover:opacity-100 hover:scale-100'
-                      }`}
-                    style={{ backgroundColor: tag.color + '20', color: tag.color, borderColor: tag.color }}
+                    className={`px-2 py-1 text-xs font-semibold rounded-md border transition-all ${
+                      formData.tags.includes(tag._id)
+                        ? 'ring-2 ring-offset-1 ring-offset-white dark:ring-offset-zinc-950 ring-indigo-500 shadow-sm'
+                        : 'opacity-60 scale-95 hover:opacity-100 hover:scale-100'
+                    }`}
+                    style={{
+                      backgroundColor: tag.color + '20',
+                      color: tag.color,
+                      borderColor: tag.color,
+                    }}
                     disabled={isReadOnly}
                   >
                     {tag.name}
@@ -259,13 +286,13 @@ export function TaskModal({
                     type="text"
                     placeholder="New custom tag"
                     value={newTagName}
-                    onChange={e => setNewTagName(e.target.value)}
+                    onChange={(e) => setNewTagName(e.target.value)}
                     className="flex h-8 w-32 items-center rounded-md border border-gray-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 dark:text-gray-100 px-2 py-1 text-xs"
                   />
                   <input
                     type="color"
                     value={newTagColor}
-                    onChange={e => setNewTagColor(e.target.value)}
+                    onChange={(e) => setNewTagColor(e.target.value)}
                     className="h-8 w-8 rounded cursor-pointer border-0 p-0"
                   />
                   <Button
@@ -279,7 +306,7 @@ export function TaskModal({
                       try {
                         setIsCreatingTag(true);
                         const newTag = await onCreateTag({ name: newTagName, color: newTagColor });
-                        setTags(prev => [...prev, newTag._id]);
+                        setFormData((prev) => ({ ...prev, tags: [...prev.tags, newTag._id] }));
                         setNewTagName('');
                       } catch (error) {
                         console.error(error);
@@ -313,7 +340,7 @@ export function TaskModal({
                 </Button>
                 <Button
                   type="submit"
-                  disabled={isSubmitting || !title || isReadOnly}
+                  disabled={isSubmitting || !formData.title || isReadOnly}
                   className="bg-indigo-600 hover:bg-indigo-700 text-white"
                 >
                   {isSubmitting ? 'Saving...' : 'Save'}

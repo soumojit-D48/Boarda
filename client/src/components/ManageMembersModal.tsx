@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { Label } from './ui/label';
-import { searchUsers } from '../lib/api';
+import api from '../lib/api';
 import { useWorkspaceMembers } from '../hooks/useWorkspaceMembers';
 import { Search, X, Crown, Shield, Share2, UserPlus, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
@@ -73,7 +73,7 @@ export function ManageMembersModal({
       if (searchQuery.trim().length > 1) {
         setIsSearching(true);
         try {
-          const res = await searchUsers(searchQuery);
+          const res = await api.get(`/users/search?q=${searchQuery}`);
           // Filter out users who are already owner or admin (shared users can be promoted)
           const nonPromotableIds = membersRef.current
             .filter((m) => m.role === 'owner' || m.role === 'admin')

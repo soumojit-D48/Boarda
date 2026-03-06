@@ -82,23 +82,4 @@ function forceLogout() {
   window.location.href = '/signin';
 }
 
-export const searchUsers = async (query: string) => {
-  return await api.get(`/users/search?q=${query}`);
-};
-
-export const getTags = async (boardId: string) => {
-  return await api.get(`/tags/${boardId}`);
-};
-
-export const createTag = async (boardId: string, data: { name: string; color: string }) => {
-  return await api.post(`/tags/${boardId}/create`, data);
-};
-
-export const reorderTasks = async (
-  boardId: string,
-  tasks: { _id: string; status: string; order: number }[]
-) => {
-  return await api.put(`/tasks/board/${boardId}/reorder`, { tasks });
-};
-
 export default api;

@@ -5,7 +5,7 @@ import * as z from 'zod';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { Label } from './ui/label';
-import { searchUsers } from '../lib/api';
+import api from '../lib/api';
 import { useBoards } from '../hooks/useBoards';
 import { Search, X } from 'lucide-react';
 
@@ -46,7 +46,7 @@ export function CreateBoardModal({ isOpen, onClose, workspaceId }: CreateBoardMo
       if (searchQuery.trim().length > 1) {
         setIsSearching(true);
         try {
-          const res = await searchUsers(searchQuery);
+          const res = await api.get(`/users/search?q=${searchQuery}`);
           setSearchResults(res.data.users);
         } catch (error) {
           console.error('Failed to search users', error);
