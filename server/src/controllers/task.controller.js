@@ -62,9 +62,9 @@ const createTask = async (req, res) => {
     if (Array.isArray(tags) && tags.length > 0) {
       const dbTags = await Tag.find({
         _id: { $in: tags },
-        $or: [{ boardId: null }, { boardId: new mongoose.Types.ObjectId(boardId) }]
+        $or: [{ boardId: null }, { boardId: new mongoose.Types.ObjectId(boardId) }],
       });
-      validTags = dbTags.map(tag => tag._id.toString());
+      validTags = dbTags.map((tag) => tag._id.toString());
     }
 
     const task = await Task.create({
@@ -95,6 +95,13 @@ const createTask = async (req, res) => {
 const getTasksByBoard = async (req, res) => {
   try {
     const { boardId } = req.params;
+    const {
+      status,
+      limit = 10,
+      cursor,
+      cursorOrder: cursorOrderParam,
+      cursorId: cursorIdParam,
+    } = req.query;
 
     const board = await Board.findById(boardId);
     if (!board) {
@@ -115,15 +122,101 @@ const getTasksByBoard = async (req, res) => {
       }
     }
 
-    const tasks = await Task.find({ boardId })
+    // Build query with filters
+    const query = { boardId };
+
+    // Filter by status if provided
+    if (status) {
+      const validStatuses = ['todo', 'in-progress', 'review', 'done'];
+      if (!validStatuses.includes(status)) {
+        return res.status(400).json({ message: 'Invalid status parameter' });
+      }
+      query.status = status;
+    }
+
+    // Cursor-based pagination using a compound cursor: (order, _id)
+    let cursorOrder =
+      cursorOrderParam !== undefined && cursorOrderParam !== ''
+        ? Number(cursorOrderParam)
+        : undefined;
+    let resolvedCursorId = cursorIdParam || undefined;
+
+    // Accept encoded cursor form: "<order>:<id>" for backward-compatible client pagination.
+    if (cursor && !resolvedCursorId && (cursorOrder === undefined || Number.isNaN(cursorOrder))) {
+      const encodedCursor = String(cursor);
+      const separatorIndex = encodedCursor.indexOf(':');
+
+      if (separatorIndex > -1) {
+        const derivedOrder = Number(encodedCursor.slice(0, separatorIndex));
+        const derivedId = encodedCursor.slice(separatorIndex + 1);
+
+        if (!Number.isNaN(derivedOrder)) {
+          cursorOrder = derivedOrder;
+          resolvedCursorId = derivedId;
+        }
+      }
+    }
+
+    // Support legacy cursor (id only) by deriving order from the cursor task.
+    if (cursor && !resolvedCursorId) {
+      resolvedCursorId = String(cursor);
+    }
+
+    if (resolvedCursorId && (cursorOrder === undefined || Number.isNaN(cursorOrder))) {
+      if (!mongoose.Types.ObjectId.isValid(resolvedCursorId)) {
+        return res.status(400).json({ message: 'Invalid cursorId' });
+      }
+
+      const cursorQuery = { _id: resolvedCursorId, boardId };
+      if (status) cursorQuery.status = status;
+
+      const cursorTask = await Task.findOne(cursorQuery).select('order');
+      if (!cursorTask) {
+        return res.status(400).json({ message: 'Invalid cursor' });
+      }
+      cursorOrder = cursorTask.order;
+    }
+
+    if (resolvedCursorId && cursorOrder !== undefined && !Number.isNaN(cursorOrder)) {
+      if (!mongoose.Types.ObjectId.isValid(resolvedCursorId)) {
+        return res.status(400).json({ message: 'Invalid cursorId' });
+      }
+      const cursorObjectId = new mongoose.Types.ObjectId(resolvedCursorId);
+      query.$or = [
+        { order: { $gt: cursorOrder } },
+        { order: cursorOrder, _id: { $gt: cursorObjectId } },
+      ];
+    }
+
+    // Parse limit to number and constrain it
+    let limitNum = parseInt(limit, 10);
+    if (isNaN(limitNum) || limitNum <= 0) limitNum = 10;
+    if (limitNum > 100) limitNum = 100;
+    // Fetch one extra to determine if there are more results
+    const fetchLimit = limitNum + 1;
+
+    const tasks = await Task.find(query)
       .populate('assignedTo', 'fullName username avatar')
       .populate('createdBy', 'fullName username avatar')
       .populate('tags')
-      .sort({ updatedAt: -1 });
+      .sort({ order: 1, _id: 1 })
+      .limit(fetchLimit);
+
+    // Determine if there are more results
+    const hasMore = tasks.length > limitNum;
+    const resultTasks = hasMore ? tasks.slice(0, limitNum) : tasks;
+
+    // Encode next cursor as "<order>:<id>" so the next request can reuse both cursor fields.
+    const nextCursor =
+      resultTasks.length > 0
+        ? `${resultTasks[resultTasks.length - 1].order}:${resultTasks[resultTasks.length - 1]._id.toString()}`
+        : null;
 
     return res.status(200).json({
       message: 'Tasks fetched successfully',
-      tasks,
+      tasks: resultTasks,
+      nextCursor,
+      hasMore,
     });
   } catch (error) {
     return res.status(500).json({ message: error.message });
@@ -185,9 +278,9 @@ const updateTask = async (req, res) => {
       if (Array.isArray(tags) && tags.length > 0) {
         const dbTags = await Tag.find({
           _id: { $in: tags },
-          $or: [{ boardId: null }, { boardId: new mongoose.Types.ObjectId(task.boardId) }]
+          $or: [{ boardId: null }, { boardId: new mongoose.Types.ObjectId(task.boardId) }],
         });
-        task.tags = dbTags.map(t => t._id.toString());
+        task.tags = dbTags.map((t) => t._id.toString());
       } else {
         task.tags = [];
       }
@@ -306,21 +399,23 @@ const reorderTasks = async (req, res) => {
       const uniqueIds = [...new Set(taskIds)];
       const matchedCount = await Task.countDocuments({ _id: { $in: uniqueIds }, boardId });
       if (matchedCount !== uniqueIds.length) {
-        return res.status(422).json({ message: 'One or more invalid task IDs or tasks do not belong to this board' });
+        return res
+          .status(422)
+          .json({ message: 'One or more invalid task IDs or tasks do not belong to this board' });
       }
     }
 
     // Prepare bulk write operations
-    const bulkOps = tasks.map(task => ({
+    const bulkOps = tasks.map((task) => ({
       updateOne: {
         filter: { _id: task._id, boardId },
         update: {
           $set: {
             status: task.status,
-            order: task.order
-          }
-        }
-      }
+            order: task.order,
+          },
+        },
+      },
     }));
 
     if (bulkOps.length > 0) {

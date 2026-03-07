@@ -34,18 +34,11 @@ export default function WorkspaceView() {
   const [sortBy, setSortBy] = useState<'updatedDesc' | 'updatedAsc' | 'nameAsc'>('updatedDesc');
 
   useEffect(() => {
-    const incoming = queryBoards as unknown as BoardProps[];
-    if (incoming === boards) return;
-
-    // Shallow-compare by id + updatedAt to avoid unnecessary re-renders
-    const isSame =
-      incoming.length === boards.length &&
-      incoming.every((b, i) => b._id === boards[i]._id && b.updatedAt === boards[i].updatedAt);
-
-    if (!isSame) {
-      setBoards(incoming);
+    // Only update if the reference changes or length differs to prevent infinite loops
+    if (queryBoards && (!boards || boards.length !== queryBoards.length)) {
+      setBoards(queryBoards as unknown as BoardProps[]);
     }
-  }, [queryBoards]);
+  }, [queryBoards, boards.length]);
 
   useEffect(() => {
     if (workspaces && workspaceId) {
