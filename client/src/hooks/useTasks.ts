@@ -7,7 +7,7 @@ export interface Task {
   title: string;
   description?: string;
   boardId: string;
-  assignedTo?: string;
+  assignedTo?: string[];
   status: 'todo' | 'in-progress' | 'review' | 'done';
   priority?: string;
   dueDate?: string;

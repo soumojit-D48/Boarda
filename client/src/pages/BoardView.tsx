@@ -174,7 +174,6 @@ export default function BoardView() {
 
   const handleDeleteTask = async () => {
     if (!selectedTask || !hasWriteAccess) return;
-    if (!confirm('Are you sure you want to delete this task?')) return;
     try {
       await deleteTask(selectedTask._id);
       setIsModalOpen(false);
