@@ -48,14 +48,22 @@ const createTask = async (req, res) => {
         .json({ message: "You don't have write permission to create tasks on this board" });
     }
 
-    // Verify assignedTo is a board member if provided
-    if (assignedTo) {
-      const isMember =
-        board.members.some((m) => m.userId.toString() === assignedTo) ||
-        board.createdBy.toString() === assignedTo;
-      if (!isMember) {
-        return res.status(400).json({ message: 'Assigned user is not a member of this board' });
+    // Verify assignedTo contains only board members if provided
+    let validAssignees = [];
+    if (assignedTo && Array.isArray(assignedTo) && assignedTo.length > 0) {
+      const invalidAssignees = assignedTo.filter((assigneeId) => {
+        const isMember =
+          board.members.some((m) => m.userId.toString() === assigneeId.toString()) ||
+          board.createdBy.toString() === assigneeId.toString();
+        return !isMember;
+      });
+
+      if (invalidAssignees.length > 0) {
+        return res
+          .status(400)
+          .json({ message: 'One or more assigned users are not members of this board' });
       }
+      validAssignees = assignedTo;
     }
 
     let validTags = [];
@@ -72,7 +80,7 @@ const createTask = async (req, res) => {
       description,
       boardId,
       createdBy: req.user._id,
-      assignedTo,
+      assignedTo: validAssignees,
       status: status || 'todo',
       priority: priority || 'low',
       dueDate,
@@ -258,19 +266,29 @@ const updateTask = async (req, res) => {
         .json({ message: "You don't have write permission to update tasks on this board" });
     }
 
-    // Verify assignedTo is a board member if provided/changed
-    if (assignedTo && assignedTo !== task.assignedTo?.toString()) {
-      const isMember =
-        board.members.some((m) => m.userId.toString() === assignedTo) ||
-        board.createdBy.toString() === assignedTo;
-      if (!isMember) {
-        return res.status(400).json({ message: 'Assigned user is not a member of this board' });
+    // Verify assignedTo contains only board members if provided/changed
+    if (assignedTo !== undefined) {
+      if (Array.isArray(assignedTo)) {
+        const invalidAssignees = assignedTo.filter((assigneeId) => {
+          const isMember =
+            board.members.some((m) => m.userId.toString() === assigneeId.toString()) ||
+            board.createdBy.toString() === assigneeId.toString();
+          return !isMember;
+        });
+
+        if (invalidAssignees.length > 0) {
+          return res
+            .status(400)
+            .json({ message: 'One or more assigned users are not members of this board' });
+        }
+        task.assignedTo = assignedTo;
+      } else {
+        task.assignedTo = [];
       }
     }
 
     if (title !== undefined) task.title = title;
     if (description !== undefined) task.description = description;
-    if (assignedTo !== undefined) task.assignedTo = assignedTo;
     if (status !== undefined) task.status = status;
     if (priority !== undefined) task.priority = priority;
     if (dueDate !== undefined) task.dueDate = dueDate;
