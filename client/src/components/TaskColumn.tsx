@@ -1,6 +1,6 @@
 import type { TaskProps } from './TaskModal';
 import { TaskCard } from './TaskCard';
-import { Plus, Loader2 } from 'lucide-react';
+import { Loader2 } from 'lucide-react';
 import { Droppable } from '@hello-pangea/dnd';
 
 interface TaskColumnProps {
@@ -8,8 +8,6 @@ interface TaskColumnProps {
   status: 'todo' | 'in-progress' | 'review' | 'done';
   tasks: TaskProps[];
   onTaskClick: (task: TaskProps) => void;
-  onAddTask: (status: 'todo' | 'in-progress' | 'review' | 'done') => void;
-  hasWriteAccess: boolean;
   onLoadMore?: () => void;
   hasMore?: boolean;
   isLoadingMore?: boolean;
@@ -20,8 +18,6 @@ export function TaskColumn({
   status,
   tasks,
   onTaskClick,
-  onAddTask,
-  hasWriteAccess,
   onLoadMore,
   hasMore,
   isLoadingMore,
