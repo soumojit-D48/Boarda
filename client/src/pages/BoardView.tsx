@@ -308,10 +308,7 @@ export default function BoardView() {
           </div>
         </div>
         {hasWriteAccess && (
-          <Button
-            onClick={() => handleOpenCreateModal('todo')}
-            className="gap-2"
-          >
+          <Button onClick={() => handleOpenCreateModal('todo')} className="gap-2">
             <Plus className="w-4 h-4" />
             Add Task
           </Button>
@@ -331,8 +328,6 @@ export default function BoardView() {
                 status={col.status}
                 tasks={getColumnTasks(col.status)}
                 onTaskClick={handleOpenEditModal}
-                onAddTask={handleOpenCreateModal}
-                hasWriteAccess={hasWriteAccess}
                 onLoadMore={() => handleLoadMore(col.status)}
                 hasMore={columnTaskQueries[col.status]?.hasNextPage ?? false}
                 isLoadingMore={columnTaskQueries[col.status]?.isFetchingNextPage ?? false}

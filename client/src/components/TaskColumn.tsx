@@ -38,7 +38,7 @@ export function TaskColumn({
           <div
             ref={provided.innerRef}
             {...provided.droppableProps}
-            className={`flex-1 overflow-y-auto no-scrollbar pb-2 min-h-[50px] transition-colors rounded-xl ${
+            className={`flex-1 overflow-y-auto no-scrollbar pb-2 min-h-12.5 transition-colors rounded-xl ${
               snapshot.isDraggingOver ? 'bg-gray-100/50 dark:bg-zinc-800/50' : ''
             }`}
           >
