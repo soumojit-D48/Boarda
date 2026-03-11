@@ -13,6 +13,7 @@ import {
   resetPassword,
 } from '../controllers/user.controller.js';
 import { verifyJWT } from '../middlewares/auth.middleware.js';
+import { authLimiter, loginLimiter } from '../middlewares/rateLimiter.middleware.js';
 import multer from 'multer';
 
 const router = Router();
@@ -38,15 +39,15 @@ router.route('/me').get(verifyJWT, getCurrentUser);
 router.route('/search').get(verifyJWT, searchUsers);
 router.route('/onboarding').post(verifyJWT, finishOnboarding);
 
-router.route('/register').post(registerUser);
-router.route('/login').post(loginUser);
+router.route('/register').post(authLimiter, registerUser);
+router.route('/login').post(loginLimiter, loginUser);
 
 //secured routes
 router.route('/logout').post(verifyJWT, logoutUser);
 router.route('/refresh-token').post(refreshAccessToken);
 
-router.route('/forgot-password').post(forgotPassword);
-router.route('/verify-otp').post(verifyOTP);
-router.route('/reset-password').post(resetPassword);
+router.route('/forgot-password').post(authLimiter, forgotPassword);
+router.route('/verify-otp').post(authLimiter, verifyOTP);
+router.route('/reset-password').post(authLimiter, resetPassword);
 
 export default router;
